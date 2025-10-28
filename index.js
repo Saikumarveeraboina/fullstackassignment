@@ -1,76 +1,85 @@
+// index.js
+const express = require("express");
+const cors = require("cors");
+const mysql = require("mysql2");
+require("dotenv").config(); // ✅ Load environment variables
 
-const express = require("express")
-const cors = require("cors")
-const mysql = require('mysql2')
-const app = express()
+const app = express();
 
-app.use(cors())
-app.use(express.json())
+app.use(cors());
+app.use(express.json());
 
-const db = mysql.createConnection({
-    host : 'localhost',
-    user: 'root',
-    password: 'saikumar2005',
-    database : 'todo'
-})
-
-db.connect((err) => {
-    if (err) {
-        console.log("Error while conneceting to db")
-        return 
-    }
-    console.log("Succesfully connected to database ✅✅")
-})
-app.get("/", (req, res) => {
-    console.log("Default route");
-    db.query('select * from todoItems', (err, result) => {
-        if (err) {
-            console.log("error occured", err)
-            return
-        }
-        console.log("Data: ", result)
-        res.send(result)
-    })
-})
-
-app.post('/add-item', (req, res) => {
-    console.log(req.body);
-    
-    db.query(`insert into todoItems (itemDescription) values ('${req.body.text}')`, (err, results) => {
-        if (err) {
-            console.log("error occured", err)
-            return
-        }
-        console.log("Created succesfully")
-    })
-    res.send("Added Succesfully")
-})
-
-app.put('/edit-item' , (req, res) => {
-    console.log('Line 50: ', req.body)
-    db.query(`update todoItems set itemDescription= "${req.body.itemDescription}" where ID = ${req.body.ID};`, (err, results) => {
-        if (err) {
-            console.log("error occured", err)
-            return
-        }
-        console.log("Created succesfully")
-    })
-  res.send("Success")
-})
-app.delete('/delete-item/:id', (req, res) => {
-    const id = req.params.id;
-    db.query(`DELETE FROM todoItems WHERE ID = ?`, [id], (err, results) => {
-        if (err) {
-            console.log("Error occured", err);
-            return res.status(500).send("Error deleting item");
-        }
-        console.log("Deleted successfully");
-        res.send("Deleted successfully");
-    });
+// ✅ Use a MySQL connection pool (no .connect() needed)
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
+// Promise-based pool for async/await (optional)
+const db = pool.promise();
 
+// ✅ Default route - test DB connection
+app.get("/", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM todoItems");
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching data:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
-app.listen(3000, () => {
-    console.log("server is runnig at http//:localhost:3000")
-})
+// ✅ Add a new item
+app.post("/add-item", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "Text is required" });
+
+    await db.query("INSERT INTO todoItems (itemDescription) VALUES (?)", [text]);
+    res.status(201).json({ message: "Item added successfully" });
+  } catch (err) {
+    console.error("Error adding item:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ✅ Edit an item
+app.put("/edit-item", async (req, res) => {
+  try {
+    const { ID, itemDescription } = req.body;
+    if (!ID || !itemDescription)
+      return res.status(400).json({ error: "ID and description required" });
+
+    await db.query("UPDATE todoItems SET itemDescription = ? WHERE ID = ?", [
+      itemDescription,
+      ID,
+    ]);
+    res.json({ message: "Item updated successfully" });
+  } catch (err) {
+    console.error("Error updating item:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ✅ Delete an item
+app.delete("/delete-item/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query("DELETE FROM todoItems WHERE ID = ?", [id]);
+    res.json({ message: "Item deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting item:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ✅ Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
