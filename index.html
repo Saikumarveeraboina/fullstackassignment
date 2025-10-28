@@ -61,7 +61,7 @@
 
 
     document.addEventListener('DOMContentLoaded', async() => {
-      let data = await fetch('http://localhost:3000', {
+      let data = await fetch('https://fullstackassignment-1-wvpw.onrender.com', {
         method: 'GET',
         headers:{'Content-Type': 'application/json' },
       })
@@ -107,7 +107,7 @@
     function addTodo() {
       let value = document.getElementById("todo-input")
       let text = value.value;
-      fetch('http://localhost:3000/add-item', {
+      fetch('https://fullstackassignment-1-wvpw.onrender.com/add-item', {
         method: 'POST',
         headers: {'Content-Type': 'application/json' },
         body : JSON.stringify({text})
@@ -118,7 +118,7 @@
 function deleteTodo(index) {
   const id = todos[index].ID;  // get the ID from array
 
-  fetch(`http://localhost:3000/delete-item/${id}`, {
+  fetch(`https://fullstackassignment-1-wvpw.onrender.com/delete-item/${id}`, {
     method: 'DELETE'
   })
   .then(res => res.text())
@@ -140,7 +140,7 @@ function deleteTodo(index) {
     function saveTodo(ID) {  
   let newValue = document.querySelector(".edit-input").value;
 
-  fetch('http://localhost:3000/edit-item', {
+  fetch('https://fullstackassignment-1-wvpw.onrender.com/edit-item', {
     method: 'PUT',
     headers: {'Content-Type': 'application/json'},
     body : JSON.stringify({ ID: ID, itemDescription: newValue })
